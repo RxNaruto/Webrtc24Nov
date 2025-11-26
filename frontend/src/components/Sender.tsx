@@ -15,7 +15,7 @@ interface TranscriptionMessage {
     isFinal: boolean;
 }
 
-const SIGN_SERVER_URL = "ws://localhost:8765";
+const SIGN_SERVER_URL = "wss://webrtc2way.rithkchaudharytechnologies.xyz/capstone";
 // wss://webrtc2way.rithkchaudharytechnologies.xyz/ws/
 const SIGNALING_SERVER_URL = "wss://webrtc2way.rithkchaudharytechnologies.xyz/ws/"; // local node server
 
