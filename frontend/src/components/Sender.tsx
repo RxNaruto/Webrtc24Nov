@@ -15,8 +15,9 @@ interface TranscriptionMessage {
     isFinal: boolean;
 }
 
-const SIGN_SERVER_URL = "ws://localhost:8765"; // local python server
-const SIGNALING_SERVER_URL = "ws://localhost:3004"; // local node server
+const SIGN_SERVER_URL = "ws://localhost:8765";
+// wss://webrtc2way.rithkchaudharytechnologies.xyz/ws/
+const SIGNALING_SERVER_URL = "wss://webrtc2way.rithkchaudharytechnologies.xyz/ws/"; // local node server
 
 export const Sender = () => {
     const [socket, setSocket] = useState<null | WebSocket>(null);
