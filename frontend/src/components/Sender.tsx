@@ -15,9 +15,10 @@ interface TranscriptionMessage {
     isFinal: boolean;
 }
 
-const SIGN_SERVER_URL = "wss://webrtc2way.rithkchaudharytechnologies.xyz/capstone/ws/";
-// wss://webrtc2way.rithkchaudharytechnologies.xyz/ws/
+const SIGN_SERVER_URL = "wss://capstonemodel.rithkchaudharytechnologies.xyz/ws/";// local python server
+// const SIGN_SERVER_URL = "ws://localhost:8765"; // local python server
 const SIGNALING_SERVER_URL = "wss://webrtc2way.rithkchaudharytechnologies.xyz/ws/"; // local node server
+// const SIGNALING_SERVER_URL = "ws://localhost:3004"; // local node server
 
 export const Sender = () => {
     const [socket, setSocket] = useState<null | WebSocket>(null);
@@ -94,7 +95,7 @@ export const Sender = () => {
                 } else {
                     setTranscriptions(prev => {
                         const filtered = prev.filter(t => t.id !== `interim-remote`);
-                        return [...filtered, { id: `interim-remote`, text: data.text, speaker:'remote', timestamp: now, isFinal:false }];
+                        return [...prev, { id: `interim-remote`, text: data.text, speaker:'remote', timestamp: now, isFinal:false }];
                     });
                 }
             }
@@ -103,27 +104,33 @@ export const Sender = () => {
 
         const signWs = new WebSocket(SIGN_SERVER_URL);
         signWs.onopen = () => console.log("Connected to sign server");
+        signWs.onclose = (ev) => console.warn("Sign WS closed", ev, "readyState:", signWs.readyState);
+        signWs.onerror = (e) => console.error('Sign WS error', e, 'readyState:', signWs.readyState);
         signWs.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'prediction') {
-                setSignPrediction(data.label);
-                setSignConfidence(data.confidence);
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: 'signPrediction',
-                        label: data.label,
-                        confidence: data.confidence,
-                        target: 'receiver'
-                    }));
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'prediction') {
+                    setSignPrediction(data.label);
+                    setSignConfidence(data.confidence);
+                    // only send to signaling socket if it's open
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'signPrediction',
+                            label: data.label,
+                            confidence: data.confidence,
+                            target: 'receiver'
+                        }));
+                    }
                 }
+            } catch (err) {
+                console.error("Failed parsing sign server message:", err);
             }
         };
-        signWs.onerror = (e) => console.error('Sign WS error', e);
         setSignSocket(signWs);
 
         return () => {
-            ws.close();
-            signWs.close();
+            try { ws.close(); } catch (e) {}
+            try { signWs.close(); } catch (e) {}
             if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
             if (frameIntervalRef.current) window.clearInterval(frameIntervalRef.current);
         };
@@ -187,7 +194,10 @@ export const Sender = () => {
     }
 
     const startSignRecognition = () => {
-        if (!signSocket || signSocket.readyState !== WebSocket.OPEN) return;
+        if (!signSocket || signSocket.readyState !== WebSocket.OPEN) {
+            console.warn("Sign socket not open. readyState:", signSocket?.readyState);
+            return;
+        }
         if (!localVideoRef.current) return;
         signSocket.send(JSON.stringify({ type: 'start' }));
 
@@ -205,7 +215,11 @@ export const Sender = () => {
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     const base64 = (reader.result as string).split(',')[1];
-                    signSocket.send(JSON.stringify({ type:'frame', image: base64 }));
+                    if (signSocket && signSocket.readyState === WebSocket.OPEN) {
+                        signSocket.send(JSON.stringify({ type:'frame', image: base64 }));
+                    } else {
+                        console.warn("Sign socket closed while sending frame, readyState:", signSocket?.readyState);
+                    }
                 };
                 reader.readAsDataURL(blob);
             }, 'image/jpeg', 0.6);
