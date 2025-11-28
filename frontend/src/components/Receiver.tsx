@@ -64,7 +64,7 @@ export const Receiver = () => {
     });
 
     useEffect(() => {
-        const ws = new WebSocket('ws://localhost:3004');
+        const ws = new WebSocket("wss://webrtc2way.rithkchaudharytechnologies.xyz/ws/");
         ws.onopen = () => { ws.send(JSON.stringify({ type: 'receiver' })); setConnectionStatus('connected'); };
         ws.onclose = () => setConnectionStatus('disconnected');
         ws.onerror = () => setConnectionStatus('disconnected');
