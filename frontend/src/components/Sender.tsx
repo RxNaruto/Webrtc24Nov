@@ -93,9 +93,10 @@ export const Sender = () => {
                         return [...filtered, { id, text: data.text, speaker:'remote', timestamp: now, isFinal:true }];
                     });
                 } else {
+                    // FIXED: use `filtered` in the returned array so `filtered` is actually read
                     setTranscriptions(prev => {
                         const filtered = prev.filter(t => t.id !== `interim-remote`);
-                        return [...prev, { id: `interim-remote`, text: data.text, speaker:'remote', timestamp: now, isFinal:false }];
+                        return [...filtered, { id: `interim-remote`, text: data.text, speaker:'remote', timestamp: now, isFinal:false }];
                     });
                 }
             }
